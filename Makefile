@@ -7,11 +7,14 @@ ABI := 2
 BUILD := build
 UNAME_S := $(shell uname -s)
 STATIC_LIBNAME := liblwcgl-$(VERSION).a
+STATIC_ALIAS := liblwcgl.a
 ifeq ($(UNAME_S),Darwin)
 SHARED_LIBNAME := liblwcgl-$(VERSION).dylib
+SHARED_ALIAS := liblwcgl.dylib
 SHARED_LDFLAGS := -dynamiclib -Wl,-install_name,@rpath/$(SHARED_LIBNAME)
 else ifeq ($(UNAME_S),Linux)
 SHARED_LIBNAME := liblwcgl-$(VERSION).so
+SHARED_ALIAS := liblwcgl.so
 SHARED_LDFLAGS := -shared -Wl,-soname,$(SHARED_LIBNAME)
 else
 $(error unsupported host OS: $(UNAME_S); supported hosts are Linux and macOS)
@@ -101,6 +104,8 @@ sanitize:
 stage-check: $(LIB) $(PKGCONFIG)
 	rm -rf $(BUILD)/stage-prefix
 	$(MAKE) install PREFIX=$(abspath $(BUILD)/stage-prefix)
+	test -e $(abspath $(BUILD)/stage-prefix)/lib/$(STATIC_ALIAS)
+	test -e $(abspath $(BUILD)/stage-prefix)/lib/$(SHARED_ALIAS)
 	PKG_CONFIG_PATH=$(abspath $(BUILD)/stage-prefix)/lib/pkgconfig $(CC) $(CFLAGS) tests/stage_consumer.c $$(PKG_CONFIG_PATH=$(abspath $(BUILD)/stage-prefix)/lib/pkgconfig pkg-config --cflags --libs --static lwcgl-$(VERSION)) -o $(TEST_DIR)/stage-consumer-c
 	PKG_CONFIG_PATH=$(abspath $(BUILD)/stage-prefix)/lib/pkgconfig $(CXX) $(CXXFLAGS) tests/stage_consumer.cpp $$(PKG_CONFIG_PATH=$(abspath $(BUILD)/stage-prefix)/lib/pkgconfig pkg-config --cflags --libs --static lwcgl-$(VERSION)) -o $(TEST_DIR)/stage-consumer-cpp
 	$(TEST_DIR)/stage-consumer-c
@@ -111,10 +116,12 @@ install: check-deps $(STATIC_LIB) $(SHARED_LIB)
 	install -d $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	install -m 0644 $(STATIC_LIB) $(DESTDIR)$(PREFIX)/lib/$(STATIC_LIBNAME)
 	install -m 0755 $(SHARED_LIB) $(DESTDIR)$(PREFIX)/lib/$(SHARED_LIBNAME)
+	cd $(DESTDIR)$(PREFIX)/lib && ln -sfn $(STATIC_LIBNAME) $(STATIC_ALIAS)
+	cd $(DESTDIR)$(PREFIX)/lib && ln -sfn $(SHARED_LIBNAME) $(SHARED_ALIAS)
 	@sed -e 's|@PREFIX@|$(PREFIX)|g' -e 's|@PRIVATE_LIBS@|$(PRIVATE_LIBS_PC)|g' lwcgl-2.9.3.pc.in > $(DESTDIR)$(PREFIX)/lib/pkgconfig/lwcgl-$(VERSION).pc
 uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)/include/lwcgl-$(VERSION)
-	rm -f $(DESTDIR)$(PREFIX)/lib/$(STATIC_LIBNAME) $(DESTDIR)$(PREFIX)/lib/$(SHARED_LIBNAME) $(DESTDIR)$(PREFIX)/lib/pkgconfig/lwcgl-$(VERSION).pc
+	rm -f $(DESTDIR)$(PREFIX)/lib/$(STATIC_LIBNAME) $(DESTDIR)$(PREFIX)/lib/$(SHARED_LIBNAME) $(DESTDIR)$(PREFIX)/lib/$(STATIC_ALIAS) $(DESTDIR)$(PREFIX)/lib/$(SHARED_ALIAS) $(DESTDIR)$(PREFIX)/lib/pkgconfig/lwcgl-$(VERSION).pc
 example: check-deps $(LIB) | $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -Werror examples/clear.c $(LIB) $(LDFLAGS) $(LIBS) -o $(BUILD)/clear
 clean:
