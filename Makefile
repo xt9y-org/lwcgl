@@ -5,8 +5,20 @@ PREFIX ?= /usr/local
 VERSION := 2.9.3
 ABI := 2
 BUILD := build
-LIBNAME := liblwcgl-$(VERSION).a
-LIB := $(BUILD)/$(LIBNAME)
+UNAME_S := $(shell uname -s)
+STATIC_LIBNAME := liblwcgl-$(VERSION).a
+ifeq ($(UNAME_S),Darwin)
+SHARED_LIBNAME := liblwcgl-$(VERSION).dylib
+SHARED_LDFLAGS := -dynamiclib -Wl,-install_name,@rpath/$(SHARED_LIBNAME)
+else ifeq ($(UNAME_S),Linux)
+SHARED_LIBNAME := liblwcgl-$(VERSION).so
+SHARED_LDFLAGS := -shared -Wl,-soname,$(SHARED_LIBNAME)
+else
+$(error unsupported host OS: $(UNAME_S); supported hosts are Linux and macOS)
+endif
+STATIC_LIB := $(BUILD)/$(STATIC_LIBNAME)
+SHARED_LIB := $(BUILD)/$(SHARED_LIBNAME)
+LIB := $(STATIC_LIB)
 PUBLIC_HEADERS := $(wildcard include/lwcgl/*.h)
 SRC := $(wildcard src/*.c)
 OBJ := $(patsubst src/%.c,$(BUILD)/%.o,$(SRC))
@@ -14,13 +26,12 @@ CONFIG := $(BUILD)/.build-config
 PKGCONFIG := $(BUILD)/lwcgl-$(VERSION).pc
 CPPFLAGS += -Iinclude -D_POSIX_C_SOURCE=200809L
 CFLAGS ?= -O2
-CFLAGS += -std=c11 -Wall -Wextra -Wpedantic
+CFLAGS += -std=c11 -Wall -Wextra -Wpedantic -fPIC
 CXXFLAGS ?= -O2
 CXXFLAGS += -std=c++17 -Wall -Wextra -Wpedantic
 LDFLAGS ?=
 PKG_CFLAGS := $(shell pkg-config --cflags glfw3 2>/dev/null)
 PKG_LIBS := $(shell pkg-config --libs glfw3 2>/dev/null)
-UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
 CPPFLAGS += -DGL_SILENCE_DEPRECATION
 PLATFORM_LIBS := -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
@@ -28,15 +39,13 @@ PRIVATE_LIBS_PC := -framework OpenGL -framework Cocoa -framework IOKit -framewor
 else ifeq ($(UNAME_S),Linux)
 PLATFORM_LIBS := -lGL -lGLU -lm -ldl -lpthread
 PRIVATE_LIBS_PC := -lGL -lGLU -lm -ldl -lpthread
-else
-$(error unsupported host OS: $(UNAME_S); supported hosts are Linux and macOS)
 endif
 CPPFLAGS += $(PKG_CFLAGS)
 LIBS := $(PKG_LIBS) $(PLATFORM_LIBS)
 TEST_DIR := $(BUILD)/tests
 TEST_BINS := $(TEST_DIR)/api-contract $(TEST_DIR)/buffer-contract $(TEST_DIR)/native-header-order $(TEST_DIR)/compat-contract $(TEST_DIR)/runtime-smoke
 .PHONY: all clean check test sanitize install uninstall check-deps deps stage-check header-check example FORCE
-all: check-deps $(LIB)
+all: check-deps $(STATIC_LIB) $(SHARED_LIB)
 test: check
 check-deps:
 	@command -v pkg-config >/dev/null 2>&1 || { echo "error: pkg-config is required"; exit 1; }
@@ -60,9 +69,12 @@ $(CONFIG): FORCE | $(BUILD)
 $(BUILD)/keyboard.o: src/key_table.inc
 $(BUILD)/%.o: src/%.c $(PUBLIC_HEADERS) src/internal.h $(CONFIG) | $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -Werror -c $< -o $@
-$(LIB): $(OBJ)
+$(STATIC_LIB): $(OBJ)
 	rm -f $@
 	$(AR) rcs $@ $^
+$(SHARED_LIB): $(OBJ)
+	rm -f $@
+	$(CC) $(SHARED_LDFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 $(PKGCONFIG): lwcgl-2.9.3.pc.in | $(BUILD)
 	sed -e 's|@PREFIX@|$(PREFIX)|g' -e 's|@PRIVATE_LIBS@|$(PRIVATE_LIBS_PC)|g' $< > $@
 $(TEST_DIR)/api-contract: tests/api_contract.cpp $(LIB) | $(TEST_DIR)
@@ -85,7 +97,7 @@ check: check-deps $(TEST_BINS) stage-check header-check example
 	$(TEST_DIR)/runtime-smoke
 sanitize:
 	$(MAKE) clean
-	$(MAKE) CFLAGS='-O1 -g -std=c11 -Wall -Wextra -Wpedantic -fsanitize=address,undefined -fno-omit-frame-pointer' CXXFLAGS='-O1 -g -std=c++17 -Wall -Wextra -Wpedantic -fsanitize=address,undefined -fno-omit-frame-pointer' LDFLAGS='-fsanitize=address,undefined' check
+	$(MAKE) CFLAGS='-O1 -g -std=c11 -Wall -Wextra -Wpedantic -fsanitize=address,undefined -fno-omit-frame-pointer -fPIC' CXXFLAGS='-O1 -g -std=c++17 -Wall -Wextra -Wpedantic -fsanitize=address,undefined -fno-omit-frame-pointer' LDFLAGS='-fsanitize=address,undefined' check
 stage-check: $(LIB) $(PKGCONFIG)
 	rm -rf $(BUILD)/stage-prefix
 	$(MAKE) install PREFIX=$(abspath $(BUILD)/stage-prefix)
@@ -93,15 +105,16 @@ stage-check: $(LIB) $(PKGCONFIG)
 	PKG_CONFIG_PATH=$(abspath $(BUILD)/stage-prefix)/lib/pkgconfig $(CXX) $(CXXFLAGS) tests/stage_consumer.cpp $$(PKG_CONFIG_PATH=$(abspath $(BUILD)/stage-prefix)/lib/pkgconfig pkg-config --cflags --libs --static lwcgl-$(VERSION)) -o $(TEST_DIR)/stage-consumer-cpp
 	$(TEST_DIR)/stage-consumer-c
 	$(TEST_DIR)/stage-consumer-cpp
-install: check-deps $(LIB)
+install: check-deps $(STATIC_LIB) $(SHARED_LIB)
 	install -d $(DESTDIR)$(PREFIX)/include/lwcgl-$(VERSION)/lwcgl
 	install -m 0644 $(PUBLIC_HEADERS) $(DESTDIR)$(PREFIX)/include/lwcgl-$(VERSION)/lwcgl/
 	install -d $(DESTDIR)$(PREFIX)/lib/pkgconfig
-	install -m 0644 $(LIB) $(DESTDIR)$(PREFIX)/lib/$(LIBNAME)
+	install -m 0644 $(STATIC_LIB) $(DESTDIR)$(PREFIX)/lib/$(STATIC_LIBNAME)
+	install -m 0755 $(SHARED_LIB) $(DESTDIR)$(PREFIX)/lib/$(SHARED_LIBNAME)
 	@sed -e 's|@PREFIX@|$(PREFIX)|g' -e 's|@PRIVATE_LIBS@|$(PRIVATE_LIBS_PC)|g' lwcgl-2.9.3.pc.in > $(DESTDIR)$(PREFIX)/lib/pkgconfig/lwcgl-$(VERSION).pc
 uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)/include/lwcgl-$(VERSION)
-	rm -f $(DESTDIR)$(PREFIX)/lib/$(LIBNAME) $(DESTDIR)$(PREFIX)/lib/pkgconfig/lwcgl-$(VERSION).pc
+	rm -f $(DESTDIR)$(PREFIX)/lib/$(STATIC_LIBNAME) $(DESTDIR)$(PREFIX)/lib/$(SHARED_LIBNAME) $(DESTDIR)$(PREFIX)/lib/pkgconfig/lwcgl-$(VERSION).pc
 example: check-deps $(LIB) | $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -Werror examples/clear.c $(LIB) $(LDFLAGS) $(LIBS) -o $(BUILD)/clear
 clean:
