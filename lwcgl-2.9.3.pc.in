@@ -7,6 +7,6 @@ Name: lwcgl-2.9.3
 Description: Native C compatibility implementation of LWJGL 2.9.3
 Version: 2.9.3
 Requires.private: glfw3 >= 3.3
-Libs: -L${libdir} -Wl,-rpath,${libdir} -llwcgl-2.9.3
+Libs: -L${libdir} -Wl,-rpath,${libdir} -llwcgl
 Libs.private: @PRIVATE_LIBS@
 Cflags: -I${includedir}
