@@ -36,7 +36,7 @@ typedef struct LWCGLsyncOpaque *LWCGLsync;
 #define GL_COPY_WRITE_BUFFER 0x8F37
 #endif
 #ifndef GL_PIXEL_PACK_BUFFER
-#define GL_PIXEL_PACK_BUFFER 0x88EB
+#define GL_PIXEL_PACK_BUFFER 0x88EC
 #endif
 #ifndef GL_PIXEL_UNPACK_BUFFER
 #define GL_PIXEL_UNPACK_BUFFER 0x88EC
@@ -214,7 +214,7 @@ typedef struct GL30API {
     void (*glDeleteVertexArrays)(GLsizei, const GLuint *);
     void (*glBindVertexArray)(GLuint);
     void (*glGenFramebuffers)(GLsizei, GLuint *);
-    void (*glDeleteFramebuffers)(GLsizei, const GLuint *);
+    void (*glDeleteFramebuffers)(GLsizei, GLuint *);
     void (*glBindFramebuffer)(GLenum, GLuint);
     void (*glFramebufferTexture2D)(GLenum, GLenum, GLenum, GLuint, GLint);
     void (*glFramebufferTextureLayer)(GLenum, GLenum, GLuint, GLint, GLint);
@@ -225,7 +225,7 @@ typedef struct GL30API {
     void (*glBindBufferBase)(GLenum, GLuint, GLuint);
     void (*glBindBufferRange)(GLenum, GLuint, GLuint, LWCGLintptr, LWCGLsizeiptr);
     void *(*glMapBufferRange)(GLenum, LWCGLintptr, LWCGLsizeiptr, GLbitfield);
-    void (*glFlushMappedBufferRange)(GLenum, LWCGLintptr, LWCGLsizeiptr, GLbitfield);
+    void (*glFlushMappedBufferRange)(GLenum, LWCGLintptr, LWCGLsizeiptr);
     GLboolean (*glUnmapBuffer)(GLenum);
     const GLubyte *(*glGetStringi)(GLenum, GLuint);
 } GL30API;
