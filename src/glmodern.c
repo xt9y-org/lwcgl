@@ -75,12 +75,13 @@ int lwcglLoadModernGL(void) {
         LOAD(GL20, glCreateProgram, 1); LOAD(GL20, glAttachShader, 1); LOAD(GL20, glDetachShader, 1);
         LOAD(GL20, glLinkProgram, 1); LOAD(GL20, glGetProgramiv, 1); LOAD(GL20, glGetProgramInfoLog, 1);
         LOAD(GL20, glUseProgram, 1); LOAD(GL20, glDeleteProgram, 1); LOAD(GL20, glGetUniformLocation, 1);
-        LOAD(GL20, glUniform1i, 1); LOAD(GL20, glUniform1f, 1); LOAD(GL20, glUniform2f, 1);
+        LOAD(GL20, glUniform1i, 1); LOAD(GL20, glUniform1f, 1); LOAD(GL20, glUniform2i, 1); LOAD(GL20, glUniform2f, 1);
         LOAD(GL20, glUniform3f, 1); LOAD(GL20, glUniform4f, 1); LOAD(GL20, glUniformMatrix4fv, 1);
         LOAD(GL20, glBindAttribLocation, 1); LOAD(GL20, glEnableVertexAttribArray, 1);
         LOAD(GL20, glDisableVertexAttribArray, 1); LOAD(GL20, glVertexAttribPointer, 1); LOAD(GL20, glDrawBuffers, 1);
     }
     if (need30) {
+        LOAD(GL20, glUniform1ui, 1);
         LOAD(GL30, glGenVertexArrays, 1); LOAD(GL30, glDeleteVertexArrays, 1); LOAD(GL30, glBindVertexArray, 1);
         LOAD(GL30, glGenFramebuffers, 1); LOAD(GL30, glDeleteFramebuffers, 1); LOAD(GL30, glBindFramebuffer, 1);
         LOAD(GL30, glFramebufferTexture2D, 1); LOAD(GL30, glFramebufferTextureLayer, 1);
