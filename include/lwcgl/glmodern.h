@@ -29,6 +29,9 @@ typedef struct LWCGLsyncOpaque *LWCGLsync;
 #ifndef GL_DRAW_INDIRECT_BUFFER
 #define GL_DRAW_INDIRECT_BUFFER 0x8F3F
 #endif
+#ifndef GL_DISPATCH_INDIRECT_BUFFER
+#define GL_DISPATCH_INDIRECT_BUFFER 0x90EE
+#endif
 #ifndef GL_COPY_READ_BUFFER
 #define GL_COPY_READ_BUFFER 0x8F36
 #endif
@@ -197,7 +200,9 @@ typedef struct GL20API {
     void (*glDeleteProgram)(GLuint);
     GLint (*glGetUniformLocation)(GLuint, const char *);
     void (*glUniform1i)(GLint, GLint);
+    void (*glUniform1ui)(GLint, GLuint);
     void (*glUniform1f)(GLint, GLfloat);
+    void (*glUniform2i)(GLint, GLint, GLint);
     void (*glUniform2f)(GLint, GLfloat, GLfloat);
     void (*glUniform3f)(GLint, GLfloat, GLfloat, GLfloat);
     void (*glUniform4f)(GLint, GLfloat, GLfloat, GLfloat, GLfloat);
