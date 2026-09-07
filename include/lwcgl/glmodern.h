@@ -9,7 +9,9 @@
 extern "C" {
 #endif
 
-#if defined(__cplusplus)
+#if defined(__clang__) || defined(__GNUC__)
+#define LWCGL_THREAD_LOCAL __thread
+#elif defined(__cplusplus)
 #define LWCGL_THREAD_LOCAL thread_local
 #else
 #define LWCGL_THREAD_LOCAL _Thread_local
