@@ -255,6 +255,8 @@ void lwcglClearError(void);
 /* Kept for source compatibility. The safe cached runtime is now the default. */
 void lwcglInstallFastRuntime(void);
 void lwcglDisplayUpdateNoMessages(void);
+int lwcglDisplayGetWindowWidth(void);
+int lwcglDisplayGetWindowHeight(void);
 uint64_t lwcglKeyboardDroppedEvents(void);
 uint64_t lwcglMouseDroppedEvents(void);
 
