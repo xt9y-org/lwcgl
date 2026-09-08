@@ -7,10 +7,23 @@ int main(void) {
     DisplayMode mode = {320, 200, 0, 0, LWCGL_FALSE};
     if (Display.setDisplayMode(&mode) != 0) return 1;
     Display.setTitle("lwcgl runtime smoke: titles are dynamically stored and are not truncated to the old fixed buffer");
+#ifdef __APPLE__
+    /*
+     * macOS exposes OpenGL 2.1 compatibility and up to 4.1 core, but no 4.3
+     * compatibility context. A high compatibility request must degrade to a
+     * usable platform context instead of making Display.create() fail.
+     */
+    lwcglSetContextVersion(4, 3);
+    lwcglSetContextProfile(LWCGL_CONTEXT_COMPATIBILITY_PROFILE);
+#else
     lwcglSetContextVersion(2, 1);
     lwcglSetContextProfile(LWCGL_CONTEXT_COMPATIBILITY_PROFILE);
+#endif
     if (Display.create() != 0) { fprintf(stderr, "%s\n", lwcglGetLastError()); return 2; }
     if (!lwcglModernGLAvailable()) return 3;
+#ifdef __APPLE__
+    if (lwcglModernGLMajorVersion() < 2) return 9;
+#endif
     if (Display.getWidth() <= 0 || Display.getHeight() <= 0) return 4;
 
     (void)glGetInteger(GL_VIEWPORT);
