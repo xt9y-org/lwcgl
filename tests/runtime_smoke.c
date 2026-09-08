@@ -25,6 +25,8 @@ int main(void) {
     if (lwcglModernGLMajorVersion() < 2) return 9;
 #endif
     if (Display.getWidth() <= 0 || Display.getHeight() <= 0) return 4;
+    if (lwcglDisplayGetWindowWidth() <= 0) return 10;
+    if (lwcglDisplayGetWindowHeight() <= 0) return 11;
 
     (void)glGetInteger(GL_VIEWPORT);
     IntBuffer *viewport = BufferUtils.createIntBuffer(4);
