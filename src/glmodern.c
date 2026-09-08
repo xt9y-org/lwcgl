@@ -21,6 +21,7 @@ static LWCGL_THREAD_LOCAL LWCGLbool g_available;
 static LWCGL_THREAD_LOCAL char g_missing[96];
 static LWCGL_THREAD_LOCAL int g_major;
 static LWCGL_THREAD_LOCAL int g_minor;
+
 static int version_at_least(int major, int minor) {
     return g_major > major || (g_major == major && g_minor >= minor);
 }
@@ -50,20 +51,30 @@ static GLFWglproc resolve(const char *name, int required) {
 } while (0)
 
 int lwcglLoadModernGL(void) {
-    clear_tables(); g_available = LWCGL_FALSE; g_missing[0] = '\0'; g_major = g_minor = 0;
-    if (!glfwGetCurrentContext()) { remember_missing("current OpenGL context"); return -1; }
+    clear_tables();
+    g_available = LWCGL_FALSE;
+    g_missing[0] = '\0';
+    g_major = g_minor = 0;
+
+    if (!glfwGetCurrentContext()) {
+        remember_missing("current OpenGL context");
+        return -1;
+    }
+
     const char *version = (const char *)glGetString(GL_VERSION);
     if (!version || sscanf(version, "%d.%d", &g_major, &g_minor) != 2) {
-        remember_missing("GL_VERSION"); return -1;
+        remember_missing("GL_VERSION");
+        return -1;
     }
-    const int need15 = version_at_least(1,5);
-    const int need20 = version_at_least(2,0);
-    const int need30 = version_at_least(3,0);
-    const int need31 = version_at_least(3,1);
-    const int need32 = version_at_least(3,2);
-    const int need33 = version_at_least(3,3);
-    const int need42 = version_at_least(4,2);
-    const int need43 = version_at_least(4,3);
+
+    const int need15 = version_at_least(1, 5);
+    const int need20 = version_at_least(2, 0);
+    const int need30 = version_at_least(3, 0);
+    const int need31 = version_at_least(3, 1);
+    const int need32 = version_at_least(3, 2);
+    const int need33 = version_at_least(3, 3);
+    const int need42 = version_at_least(4, 2);
+    const int need43 = version_at_least(4, 3);
 
     if (need15) {
         LOAD(GL15, glGenBuffers, 1); LOAD(GL15, glDeleteBuffers, 1); LOAD(GL15, glBindBuffer, 1);
@@ -106,17 +117,22 @@ int lwcglLoadModernGL(void) {
         LOAD(GL43, glDispatchCompute, 1); LOAD(GL43, glDispatchComputeIndirect, 1);
         LOAD(GL43, glMultiDrawArraysIndirect, 1); LOAD(GL43, glMultiDrawElementsIndirect, 1);
     }
-    LOAD(GLModern, glActiveTexture, version_at_least(1,3));
-    LOAD(GLModern, glTexImage3D, version_at_least(1,2));
-    LOAD(GLModern, glTexSubImage3D, version_at_least(1,2));
+
+    LOAD(GLModern, glActiveTexture, version_at_least(1, 3));
+    LOAD(GLModern, glTexImage3D, version_at_least(1, 2));
+    LOAD(GLModern, glTexSubImage3D, version_at_least(1, 2));
     LOAD(GLModern, glPixelStorei, 0);
     LOAD(GLModern, glReadPixels, 0);
-    LOAD(GLModern, glShaderBinary, version_at_least(4,1));
+    LOAD(GLModern, glShaderBinary, version_at_least(4, 1));
 
     if (g_missing[0]) return -1;
-    if (!version_at_least(lwcglRequestedContextMajorVersion(), lwcglRequestedContextMinorVersion())) {
-        remember_missing("requested OpenGL context version"); return -1;
-    }
+
+    /*
+     * This loader reflects the capabilities of the context that was actually
+     * created. A requested version can legally be degraded by the platform
+     * layer (notably on macOS); callers that require a specific feature level
+     * must inspect the reported version and the relevant function pointers.
+     */
     g_available = LWCGL_TRUE;
     return 0;
 }
